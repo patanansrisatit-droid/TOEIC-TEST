@@ -135,9 +135,9 @@ i[data-lucide] {
     padding: 0 16px;
 }
 #tutor-screen.layout-horizontal .question-column {
-    flex: 1 1 0;
+    flex: 1 1 80%;
     min-width: 280px;
-    max-width: 500px;
+    max-width: 90vw;
     word-wrap: break-word;
     overflow-wrap: break-word;
 }

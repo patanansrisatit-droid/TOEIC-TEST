@@ -42,6 +42,19 @@ function getNormalizedId(id) {
     return id.replace(/^img-\d+-/, 'img-');
 }
 
+function escapeHtml(s) {
+    return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function isNumericId(id) {
+    return (typeof id === 'number') || (typeof id === 'string' && /^\d+$/.test(String(id)));
+}
+
 window.onload = () => {
     renderExamDashboard();
     if (window.lucide) { lucide.createIcons(); }
@@ -144,6 +157,9 @@ function renderExamDashboard() {
     if (!data) { grid.innerHTML = `<div class="text-white col-span-3 text-center bg-slate-800 p-6 rounded-xl border border-slate-700">ไม่พบข้อมูลชุดข้อสอบ (examPackages)</div>`; return; }
     window.targetExamData = data;
     data.forEach(pkg => {
+        const numericCount = (pkg.questions || []).filter(q => {
+            return (typeof q.id === 'number') || (typeof q.id === 'string' && /^\d+$/.test(String(q.id)));
+        }).length;
         const card = document.createElement('div');
         card.className = "bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition flex flex-col justify-between";
 
@@ -151,7 +167,7 @@ function renderExamDashboard() {
             <img src="${pkg.setCover||'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600'}" class="w-full h-44 object-cover">
             <div class="p-5 flex-1 flex flex-col justify-between">
                 <div><h3 class="text-lg font-bold text-white mb-2">${pkg.setTitle}</h3>
-                <p class="text-slate-400 text-xs mb-4">จำนวน: ${pkg.questions.length} ข้อ</p></div>
+                <p class="text-slate-400 text-xs mb-4">จำนวน: ${numericCount} ข้อ</p></div>
                 <button onclick="startExam('${pkg.setId}')" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 group">
                     <span>Select</span>
                     <i data-lucide="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-1"></i>
@@ -1133,8 +1149,16 @@ function renderQuestion() {
     console.log('renderQuestion called, currentIdx:', currentIdx, 'examScreens.length:', examScreens.length);
     if (!currentSet || examScreens.length === 0) { console.log('renderQuestion early return'); return; }
     const screenQuestions = examScreens[currentIdx];
-    const totalScreens = examScreens.length;
-    const num = currentIdx + 1;
+    // Compute visible (non-break) screens for progress/jump numbering
+    const nonBreakScreens = examScreens.filter(s => {
+        const first = s && s[0];
+        return first && isNumericId(first.id);
+    });
+    const totalScreens = nonBreakScreens.length;
+    // Determine the visible index for the current screen (if it's a break, show dash)
+    const isCurrentBreak = !(screenQuestions && screenQuestions[0] && isNumericId(screenQuestions[0].id));
+    const visibleIndex = isCurrentBreak ? null : (nonBreakScreens.findIndex(s => s === screenQuestions));
+    const num = visibleIndex === -1 || visibleIndex === null ? null : visibleIndex + 1;
 
     // Clear ทุก canvas ก่อน render หน้าใหม่ ป้องกันเส้นเก่าค้าง
     clearAllCanvases();
@@ -1142,9 +1166,10 @@ function renderQuestion() {
     updateLayoutMode();
     const isHorizontal = currentLayoutMode === 'horizontal';
 
-    document.getElementById('question-counter').innerText = `Page ${num} of ${totalScreens}`;
-    document.getElementById('progress-percent').innerText = `${Math.round(num/totalScreens*100)}%`;
-    document.getElementById('progress-bar').style.width = `${Math.round(num/totalScreens*100)}%`;
+    document.getElementById('question-counter').innerText = num ? `Page ${num} of ${totalScreens}` : `Page - of ${totalScreens}`;
+    const percent = num ? Math.round(num/totalScreens*100) : 0;
+    document.getElementById('progress-percent').innerText = `${percent}%`;
+    document.getElementById('progress-bar').style.width = `${percent}%`;
 
     const ap = document.getElementById('audio-player');
     const ac = document.getElementById('audio-container');
@@ -1427,6 +1452,21 @@ function setupGlobalTranscriptCanvas(qId) {
 }
 function generateQuestionHTML(q) {
     const isH = currentLayoutMode === 'horizontal';
+    const isNumericId = id => (typeof id === 'number') || (typeof id === 'string' && /^\d+$/.test(String(id)));
+    const isBreakId = !isNumericId(q.id);
+    const safeQuestionText = (q.questionText || '').split('\n').map(escapeHtml).join('<br>');
+    const safeNote = (q.note || '').split('\n').map(escapeHtml).join('<br>');
+    if (isBreakId) {
+        // Break page: only show the questionText as break content (no images/options/canvases)
+        return `
+            <div class="w-full p-8 flex items-center justify-center">
+                <div class="w-full max-w-[80%] bg-gradient-to-b from-indigo-50 to-white border-2 border-indigo-200 rounded-3xl shadow-lg p-10 md:p-14 text-center">
+                    <div class="text-xl md:text-2xl font-black text-indigo-900 mb-4 leading-tight">${safeQuestionText}</div>
+                    ${q.note ? `<div class="w-16 h-1 bg-indigo-300 mx-auto mb-5 rounded-full"></div><div class="text-sm md:text-base font-medium text-slate-600 leading-relaxed max-w-lg mx-auto">${safeNote}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }
     const selected = (qId, i) => selectedAnswers[qId] === i;
     const hideChoices = q.hideOptions && hiddenChoices[q.id];
     const showingHiddenOptions = q.hideOptions && !hiddenChoices[q.id];
@@ -1467,7 +1507,7 @@ function generateQuestionHTML(q) {
     const answerBtnHTML = `<button id="btn-answer-${q.id}" onpointerdown="event.stopPropagation(); event.preventDefault(); checkAnswer(${q.id});" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold ${isH ? 'text-sm px-4 py-3' : 'text-base px-5 py-3'} rounded-xl transition flex items-center gap-1" style="position:relative;z-index:110;pointer-events:auto"><i data-lucide="check-check" class="w-4 h-4"></i> Show Answer</button>`;
 
     return `
-        <div class="${isH ? 'text-base' : 'text-lg'} font-bold text-slate-800 leading-snug mb-3">${q.questionText}</div>
+        <div class="${isH ? 'text-base' : 'text-lg'} font-bold text-slate-800 leading-snug mb-3">${safeQuestionText}</div>
         ${showTranscriptPerQuestion ? `
         <div class="flex flex-col ${btnGap} mb-2">
             ${transcriptBtnHTML}
@@ -1766,28 +1806,30 @@ function _togglePanel(stateMap, qId, boxId, btnId, cfg) {
             const grid = document.getElementById('jump-grid');
             if (!grid) return;
             grid.innerHTML = '';
-
-            let globalQNum = 0;
+            // Number only non-break screens; map displayed number -> screen index
+            let displayNum = 0;
             examScreens.forEach((screen, idx) => {
-                screen.forEach((q, qIdx) => {
-                    globalQNum++;
-                    const btn = document.createElement('button');
-                    btn.textContent = globalQNum;
-                    btn.dataset.screenIdx = idx;
-                    btn.className = 'w-7 h-7 text-xs font-medium rounded-md transition flex items-center justify-center';
+                const first = screen && screen[0];
+                const isBreak = !(first && isNumericId(first.id));
+                const btn = document.createElement('button');
+                btn.dataset.screenIdx = idx;
+                btn.className = 'w-7 h-7 text-xs font-medium rounded-md transition flex items-center justify-center';
 
-                    if (idx === currentIdx) {
-                        btn.className += ' bg-blue-500 text-white shadow-sm';
-                    } else {
-                        btn.className += ' bg-slate-50 hover:bg-blue-100 text-slate-600 border border-slate-200';
-                    }
+                if (isBreak) {
+                    btn.textContent = '—';
+                    btn.title = 'Break page';
+                    btn.className += (idx === currentIdx) ? ' bg-blue-500 text-white shadow-sm' : ' bg-slate-50 text-slate-400 border border-slate-200';
+                } else {
+                    displayNum++;
+                    btn.textContent = displayNum;
+                    btn.className += (idx === currentIdx) ? ' bg-blue-500 text-white shadow-sm' : ' bg-slate-50 hover:bg-blue-100 text-slate-600 border border-slate-200';
+                }
 
-                    btn.onclick = function() {
-                        jumpToQuestion(parseInt(this.dataset.screenIdx));
-                        closeJumpDropdown();
-                    };
-                    grid.appendChild(btn);
-                });
+                btn.onclick = function() {
+                    jumpToQuestion(parseInt(this.dataset.screenIdx));
+                    closeJumpDropdown();
+                };
+                grid.appendChild(btn);
             });
         }
         function toggleJumpDropdown() {

@@ -5,6 +5,11 @@ const examPackages = [
         "setCover": "./assets/cover/RC-Test-cover-RC-ฟ้าแดงเหลือง-2-update.webp",
         "questions": [
             {
+                "id": "PART 5",
+                "groupId": "PART 5",
+                "questionText": "PART 5 \nDirections: A word or phrase is missing in each of the sentences below. Four answer choices are given below each sentence. Select the best answer to complete the sentence. Then mark the letter (A), (B), (C), or (D) on your answer sheet.",
+            },
+            {
                 "id": 101,
                 "groupId": "",
                 "questionText": "101: Busan Cosmetics is pleased to _____ Jin-Sook Kim, a new team member in product development.",
@@ -444,6 +449,11 @@ const examPackages = [
                 "explanation": "เพราะตำแหน่งในประโยคนี้ต้องการคำคุณศัพท์มาขยาย registration card ซึ่ง validated ที่แปลว่า 'ที่ผ่านการตรวจสอบแล้ว' ให้ความหมายที่ถูกต้องที่สุด ส่วน (A) frequent แปลว่า บ่อย, (B) indicative แปลว่า ที่บ่งชี้ และ (D) dispersed แปลว่า ที่กระจัดกระจาย ซึ่งล้วนผิดความหมายในบริบทของการลงทะเบียนสินค้า"
             },
             {
+                "id": "PART 6",
+                "groupId": "PART 6",
+                "questionText": "PART 6 \nDirections: Read the texts that follow. A word, phrase, or sentence is missing in parts of each text. Four answer choices for each question are given below the text. Select the best answer to complete the text. Then mark the letter (A), (B), (C), or (D) on your answer sheet.",
+            },
+            {
                 "id": 131,
                 "groupId": "group-131",
                 "questionText": "131:",
@@ -666,6 +676,11 @@ const examPackages = [
                 ],
                 "correctAnswer": 1,
                 "explanation": "เพราะประโยคนี้ทำหน้าที่ให้ข้อมูลสนับสนุนและคำแนะนำเพิ่มเติมอย่างเป็นเหตุเป็นผลเกี่ยวกับทักษะเฉพาะด้านที่ควรจะนำมาอภิปรายหรือกล่าวถึงในบทความที่กำลังเขียน ส่วนตัวเลือก (A), (C) และ (D) เป็นประโยคที่มีเนื้อความสื่อไปคนละทิศทางและไม่สอดคล้องต่อเนื่องกับใจความสำคัญโดยรอบ"
+            },
+            {
+                "id": "PART 7",
+                "groupId": "PART 7",
+                "questionText": "PART 7 \nDirections: In this part you will read a selection of texts, such as magazine and newspaper articles, e-mails, and instant messages. Each text or set of texts is followed by several questions. Select the best answer for each question and mark the letter (A), (B), (C), or (D) on your answer sheet.",
             },
             {
                 "id": 147,
@@ -1531,6 +1546,11 @@ const examPackages = [
         "setCover": "./assets/cover/LC-Test-cover-ฟ้าม่วง-2-update.webp",
         "questions": [
         {
+            "id": "PART 1",
+            "groupId": "PART 1",
+            "questionText": "PART 1 \nDirections: For each question in this part, you will hear four statements about a picture in your test book. When you hear the statements, you must select the one statement that best describes what you see in the picture. Then find the number of the question on your answer sheet and mark your answer. The statements will not be printed in your test book and will be spoken only one time.",
+        },
+        {
             "id": 1,
             "groupId": "group-1",
             "questionText": "1: ",
@@ -1625,6 +1645,11 @@ const examPackages = [
             "explanation": "เพราะภาพมีชายยืนใกล้พื้นที่ก่อสร้าง ส่วนตัวเลือก (B) climbing แปลว่ากำลังปีน แต่ไม่มีใครปีนบันได, (C) planted แปลว่าถูกปลูก แต่ไม่เห็นการปลูกต้นไม้ใหม่ และ (D) transporting แปลว่ากำลังขนส่ง แต่ไม่มีรถกำลังขนวัสดุ",
             "audioUrl": "./assets/audio/ฟ้าม่วง LC2/6.mp3",
             "hideOptions": true
+        },
+        {
+            "id": "PART 2",
+            "groupId": "PART 2",
+            "questionText": "PART 2 \nDirections: You will hear a question or statement and three responses spoken in English. They will not be printed in your test book and will be spoken only one time. Select the best response to the question or statement and mark the letter (A), (B), or (C) on your answer sheet.",
         },
         {   
             "id": 7,
@@ -2000,6 +2025,11 @@ const examPackages = [
             "audioUrl": "./assets/audio/ฟ้าม่วง LC2/31.mp3",
             "transcript": "We've met these clients before, haven't we?",
             "hideOptions": true
+            },
+            {
+            "id": "PART 3",
+            "groupId": "PART 3",
+            "questionText": "PART 6 \nDirections: You will hear some conversations between two or more people. You will be asked to answer three questions about what the speakers say in each conversation. Select the best response to each question and mark the letter (A), (B), (C), or (D) on your answer sheet. The conversations will not be printed in your test book and will be spoken only one time.",
             },
             {
             "id": 32,
@@ -2537,6 +2567,11 @@ const examPackages = [
             "correctAnswer": 0,
             "explanation": "เพราะทนายความหญิงเสนอตัวที่จะช่วยไปพูดคุยและเจรจาต่อรองกับทางฝั่งผู้ขายอาคาร เพื่อขอให้ฝ่ายผู้ขายเป็นคนออกค่าใช้จ่ายในการปรับปรุงระบบไฟฟ้าในตึกให้",
             },
+        {
+                "id": "PART 4",
+                "groupId": "PART 4",
+                "questionText": "PART 4 \nDirections: You will hear some talks given by a single speaker. You will be asked to answer three questions about what the speaker says in each talk. Select the best response to each question and mark the letter (A), (B), (C), or (D) on your answer sheet. The talks will not be printed in your test book and will be spoken only one time.",
+            },
             {
             "id": 71,
             "groupId": "group-71-73",
@@ -2957,6 +2992,11 @@ const examPackages = [
         "setCover": "./assets/cover/RC-Test-cover-RC-ฟ้าม่วง-2-update.webp",
         "questions": [
             {
+                "id": "PART 5",
+                "groupId": "PART 5",
+                "questionText": "PART 5 \nDirections: A word or phrase is missing in each of the sentences below. Four answer choices are given below each sentence. Select the best answer to complete the sentence. Then mark the letter (A), (B), (C), or (D) on your answer sheet.",
+            },
+            {
                 "id": 101,
                 "questionText": "101: This discounted train ticket is _____ only at certain times of the day.",
                 "images": [],
@@ -3347,6 +3387,11 @@ const examPackages = [
                 "explanation": "เพราะมีสำนวน used to ที่แปลว่าเคยชิน หรือใช้ในบริบทที่แปลว่า ยึดติดอยู่กับ ส่วนข้อ (B) attract แปลว่าดึงดูด, (C) construct แปลว่าสร้าง, (D) sustain แปลว่าค้ำจุน/รักษาไว้ ซึ่งความหมายไม่เข้ากับคำว่าติดอยู่กับที่"
             },
             {
+                "id": "PART 6",
+                "groupId": "PART 6",
+                "questionText": "PART 6 \nDirections: Read the texts that follow. A word, phrase, or sentence is missing in parts of each text. Four answer choices for each question are given below the text. Select the best answer to complete the text. Then mark the letter (A), (B), (C), or (D) on your answer sheet.",
+            },
+            {
                 "id": 131,
                 "questionText": "131:",
                 "images": [
@@ -3585,6 +3630,11 @@ const examPackages = [
                 ],
                 "correctAnswer": 0,
                 "explanation": "เพราะตามหลังคำว่า are ต้องเป็นคำคุณศัพท์ที่บอกเหตุผลของการซ่อมแซม แปลว่า จำเป็น/เลี่ยงไม่ได้ ส่วนข้อ (B) temporary แปลว่าชั่วคราว, (C) expensive แปลว่าแพง, (D) unexpected แปลว่าไม่คาดคิด"
+            },
+            {
+                "id": "PART 7",
+                "groupId": "PART 7",
+                "questionText": "PART 7 \nDirections: In this part you will read a selection of texts, such as magazine and newspaper articles, e-mails, and instant messages. Each text or set of texts is followed by several questions. Select the best answer for each question and mark the letter (A), (B), (C), or (D) on your answer sheet.",
             },
             {
                 "id": 147,
