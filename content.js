@@ -4442,4 +4442,4 @@ const examPackages = [
 window.addEventListener('DOMContentLoaded', () => {
     console.log('examPackages:', typeof examPackages);
     console.log('examData:', typeof examData);
-});
+});2

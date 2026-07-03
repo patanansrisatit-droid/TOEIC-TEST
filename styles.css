@@ -26,7 +26,7 @@ i[data-lucide] {
     flex-direction: row;
 }
 #tutor-screen.layout-vertical #image-gallery {
-    overflow: hidden;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -85,7 +85,7 @@ i[data-lucide] {
     width: 100%;
     flex-wrap: nowrap !important;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     overflow-x: auto;
     overflow-y: hidden;
     gap: 12px;
@@ -290,11 +290,7 @@ i[data-lucide] {
 }
 .cursor-crosshair { cursor: crosshair !important; }
 .cursor-eraser { cursor: cell !important; }
-body.drawing-mode canvas,
-body.drawing-mode img,
-body.drawing-mode #question-panel,
-body.drawing-mode #left-panel,
-body.drawing-mode #content-area { cursor: none !important; }
+body.drawing-mode canvas { cursor: none !important; }
 body.zoom-open .zoom-btn { display: none; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -333,17 +329,17 @@ body.zoom-open .zoom-btn { display: none; }
     position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow: auto;
     flex: 1;
     min-height: 0;
     contain: layout style;
 }
 #tutor-screen.layout-horizontal #viewport-workspace {
-    overflow-y: auto;
+    overflow: auto;
 }
 
 #zoomable-content {
-    transform-origin: top left;
+    transform-origin: center center;
     will-change: transform;
     width: 100%;
     height: 100%;

@@ -396,25 +396,83 @@ function selectCustomColor(color) {
     activeColor = color;
     document.querySelectorAll('.color-dot').forEach(d => { d.classList.remove('scale-110','border-white','border-2'); d.style.borderColor='transparent'; });
 }
+function syncGalleryCanvasToImage(canvas) {
+    if (!canvas) return null;
+
+    const img = canvas.parentElement?.querySelector('img');
+    if (!img) return null;
+
+    const css = getCssLayoutRect(img);
+    const width = css.width;
+    const height = css.height;
+    if (width <= 0 || height <= 0) return null;
+
+    const dpr = window.devicePixelRatio || 1;
+    const nextWidth = Math.round(width * dpr);
+    const nextHeight = Math.round(height * dpr);
+
+    // Calculate img offset within parent in CSS layout pixels (undoing ancestor transforms)
+    // Parent uses flex centering → img may not start at (0,0)
+    const parentRect = canvas.parentElement.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+
+    // Compute cumulative transform scale (same logic as getCssLayoutRect)
+    let sx = 1, sy = 1;
+    const zc = img.closest('#zoomable-content');
+    if (zc && zc.clientWidth > 0 && zc.clientHeight > 0) {
+        const zcr = zc.getBoundingClientRect();
+        sx = Math.max(zcr.width / zc.clientWidth, 0.01);
+        sy = Math.max(zcr.height / zc.clientHeight, 0.01);
+    }
+    const ztc = img.closest('#zoom-transform-container');
+    if (ztc && ztc.clientWidth > 0 && ztc.clientHeight > 0) {
+        const ztcr = ztc.getBoundingClientRect();
+        sx *= Math.max(ztcr.width / ztc.clientWidth, 0.01);
+        sy *= Math.max(ztcr.height / ztc.clientHeight, 0.01);
+    }
+
+    const cssLeft = (imgRect.left - parentRect.left) / sx;
+    const cssTop = (imgRect.top - parentRect.top) / sy;
+
+    if (canvas.width !== nextWidth || canvas.height !== nextHeight || canvas.style.width !== width + 'px' || canvas.style.height !== height + 'px' || canvas.style.left !== cssLeft + 'px' || canvas.style.top !== cssTop + 'px') {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        canvas.style.left = cssLeft + 'px';
+        canvas.style.top = cssTop + 'px';
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    return { width, height };
+}
+
+function observeGalleryCanvasResize(canvas) {
+    const img = canvas.parentElement?.querySelector('img');
+    if (!img || img.__galleryCanvasObserver) return;
+
+    const observer = new ResizeObserver(() => {
+        syncGalleryCanvasToImage(canvas);
+        redrawCanvas(canvas);
+    });
+
+    observer.observe(img);
+    img.__galleryCanvasObserver = observer;
+}
+
 function resizeAllActiveCanvases() {
     const dpr = window.devicePixelRatio || 1;
 
     const galleryCanvases = document.querySelectorAll('.gallery-canvas');
     galleryCanvases.forEach(c => {
-        const img = c.parentElement.querySelector('img');
-        if (img) {
-            const w = img.offsetWidth;
-            const h = img.offsetHeight;
-            if (w > 0 && h > 0) {
-                const dpr = window.devicePixelRatio || 1;
-                c.width = Math.round(w * dpr);
-                c.height = Math.round(h * dpr);
-                c.style.width = w + 'px';
-                c.style.height = h + 'px';
-                const ctx = c.getContext('2d');
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                redrawCanvas(c);
-            }
+        if (c.id === 'zoomCanvas') return; // zoom canvas uses width:100% CSS, handled separately below
+        const result = syncGalleryCanvasToImage(c);
+        if (result) {
+            redrawCanvas(c);
         }
     });
 
@@ -422,8 +480,9 @@ function resizeAllActiveCanvases() {
     document.querySelectorAll('.options-canvas').forEach(cvs => {
         const container = cvs.parentElement.querySelector('[id^="options-container-"]');
         if (container && !container.classList.contains('hidden')) {
-            const w = container.offsetWidth;
-            const h = container.offsetHeight;
+            const rect = getCssLayoutRect(container);
+            const w = rect.width;
+            const h = rect.height;
             if (w > 0 && h > 0) {
                 cvs.width = Math.round(w * dpr);
                 cvs.height = Math.round(h * dpr);
@@ -440,8 +499,9 @@ function resizeAllActiveCanvases() {
     document.querySelectorAll('.answer-canvas').forEach(cvs => {
         const box = cvs.parentElement.querySelector('[id^="explanation-box-"]');
         if (box && !box.classList.contains('hidden')) {
-            const w = box.offsetWidth;
-            const h = box.offsetHeight;
+            const rect = getCssLayoutRect(box);
+            const w = rect.width;
+            const h = rect.height;
             if (w > 0 && h > 0) {
                 cvs.width = Math.round(w * dpr);
                 cvs.height = Math.round(h * dpr);
@@ -457,8 +517,9 @@ function resizeAllActiveCanvases() {
 document.querySelectorAll('.transcript-canvas').forEach(cvs => {
         const box = cvs.parentElement.querySelector('[id^="transcript-box-"]');
         if (box && !box.classList.contains('hidden')) {
-            const w = box.offsetWidth;
-            const h = box.offsetHeight;
+            const rect = getCssLayoutRect(box);
+            const w = rect.width;
+            const h = rect.height;
             if (w > 0 && h > 0) {
                 cvs.width = Math.round(w * dpr);
                 cvs.height = Math.round(h * dpr);
@@ -471,23 +532,33 @@ document.querySelectorAll('.transcript-canvas').forEach(cvs => {
         }
     });
 
-    // rightPanelCanvas: ขนาดคงที่ ไม่ resize ซ้ำ (ตั้งค่าครั้งเดียวตอน setup)
-    // ไม่ resize rightPanelCanvas ที่นี่ เพราะจะทำให้ขนาดเปลี่ยนทุกครั้งที่ renderQuestion
-
-    if (!zoomOverlay.classList.contains('hidden')) {
-        const zoomedImg = document.getElementById('zoomed-image');
-        if (zoomedImg && zoomedImg.clientWidth > 0) {
-            const zRect = zoomedImg.getBoundingClientRect();
-            if (zRect.width > 0 && zRect.height > 0) {
-                zoomCanvas.width = Math.round(zRect.width * dpr);
-                zoomCanvas.height = Math.round(zRect.height * dpr);
-                zoomCanvas.style.width = zRect.width + 'px';
-                zoomCanvas.style.height = zRect.height + 'px';
-                const zCtx = zoomCanvas.getContext('2d');
-                zCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                redrawCanvas(zoomCanvas);
+    // Global transcript canvas: size from parent (.relative.mt-3), not from box
+    const globalTranscriptCanvas = document.getElementById('global-transcript-canvas');
+    if (globalTranscriptCanvas && !globalTranscriptCanvas.classList.contains('hidden')) {
+        const parent = globalTranscriptCanvas.parentElement;
+        if (parent) {
+            const rect = getCssLayoutRect(parent);
+            const w = rect.width;
+            const h = rect.height;
+            if (w > 0 && h > 0) {
+                globalTranscriptCanvas.width = Math.round(w * dpr);
+                globalTranscriptCanvas.height = Math.round(h * dpr);
+                globalTranscriptCanvas.style.width = w + 'px';
+                globalTranscriptCanvas.style.height = h + 'px';
+                const ctx = globalTranscriptCanvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                redrawCanvas(globalTranscriptCanvas);
             }
         }
+    }
+
+    // Zoom canvas: reset buffer to match current CSS display size × dpr
+    if (!zoomOverlay.classList.contains('hidden')) {
+        zoomCanvas.width = Math.round(zoomCanvas.clientWidth * dpr);
+        zoomCanvas.height = Math.round(zoomCanvas.clientHeight * dpr);
+        const zCtx = zoomCanvas.getContext('2d');
+        zCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        redrawCanvas(zoomCanvas);
     }
 }
 
@@ -520,17 +591,59 @@ function getObjectContainRect(boxW, boxH, natW, natH) {
     return { x: (boxW - w) / 2, y: (boxH - h) / 2, w, h };
 }
 
+/**
+ * Return the CSS layout dimensions of `element` with subpixel precision,
+ * undoing any ancestor CSS transforms applied on #zoomable-content
+ * or #zoom-transform-container.
+ *
+ * Why: getBoundingClientRect() includes ancestor transforms (e.g., viewport
+ * zoom scale, image zoom scale), while layout properties like
+ * clientWidth/clientHeight are transform-blind and integer-rounded.
+ * This helper bridges the gap so all canvas sizing and redrawing code
+ * uses the same transform-undone metric.
+ */
+function getCssLayoutRect(element) {
+    const rect = element.getBoundingClientRect();
+    let scaleX = 1;
+    let scaleY = 1;
+
+    // Undo #zoomable-content transform (viewport zoom/pan)
+    const zc = element.closest('#zoomable-content');
+    if (zc && zc.clientWidth > 0 && zc.clientHeight > 0) {
+        const zcRect = zc.getBoundingClientRect();
+        scaleX = Math.max(zcRect.width  / zc.clientWidth,  0.01);
+        scaleY = Math.max(zcRect.height / zc.clientHeight, 0.01);
+    }
+
+    // Undo #zoom-transform-container transform (zoom overlay image zoom)
+    const ztc = element.closest('#zoom-transform-container');
+    if (ztc && ztc.clientWidth > 0 && ztc.clientHeight > 0) {
+        const ztcRect = ztc.getBoundingClientRect();
+        scaleX *= Math.max(ztcRect.width  / ztc.clientWidth,  0.01);
+        scaleY *= Math.max(ztcRect.height / ztc.clientHeight, 0.01);
+    }
+
+    return {
+        width:  rect.width  / scaleX,
+        height: rect.height / scaleY
+    };
+}
+
 function correctCoordinates(clientX, clientY, canvas) {
     const cRect = canvas.getBoundingClientRect();
-    const img = canvas.parentElement.querySelector('img');
-    let content = { x: 0, y: 0, w: cRect.width, h: cRect.height };
+    const css = getCssLayoutRect(canvas);
+    const cssScaleX = cRect.width / css.width;
+    const cssScaleY = cRect.height / css.height;
+    const cssX = (clientX - cRect.left) / cssScaleX;
+    const cssY = (clientY - cRect.top) / cssScaleY;
+
+    const img = canvas.parentElement?.querySelector('img');
+    let content = { x: 0, y: 0, w: css.width, h: css.height };
     if (img && img.naturalWidth && img.naturalHeight) {
-        content = getObjectContainRect(cRect.width, cRect.height, img.naturalWidth, img.naturalHeight);
+        content = getObjectContainRect(css.width, css.height, img.naturalWidth, img.naturalHeight);
     }
-    const visualX = clientX - cRect.left - content.x;
-    const visualY = clientY - cRect.top - content.y;
-    const normalizedX = visualX / content.w;
-    const normalizedY = visualY / content.h;
+    const normalizedX = (cssX - content.x) / content.w;
+    const normalizedY = (cssY - content.y) / content.h;
     return { x: normalizedX, y: normalizedY };
 }
 
@@ -646,20 +759,33 @@ function setupCanvasDrawing(canvas) {
 function redrawCanvas(canvas) {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    // clearRect ใช้ขนาด canvas ที่รวม dpr แล้ว
+
+    // Save state & reset to identity so drawing is in device-pixel space
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // clearRect uses identity — full canvas buffer in device pixels
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     const elementId = canvas.getAttribute('data-element-id');
 
-    // ขนาดจริง (ไม่รวม dpr) สำหรับการวาด
-    const displayWidth = canvas.width / dpr;
-    const displayHeight = canvas.height / dpr;
-
-    // หาพื้นที่รูปจริง (หัก letterbox ของ object-contain ออก)
-    const img = canvas.parentElement.querySelector('img');
+    const img = canvas.parentElement?.querySelector('img');
+    const css = getCssLayoutRect(canvas);
+    let displayWidth = css.width;
+    let displayHeight = css.height;
     let content = { x: 0, y: 0, w: displayWidth, h: displayHeight };
+
     if (img && img.naturalWidth && img.naturalHeight) {
         content = getObjectContainRect(displayWidth, displayHeight, img.naturalWidth, img.naturalHeight);
     }
+
+    // Scale content dimensions by dpr for device-pixel drawing
+    const dc = {
+        x: content.x * dpr,
+        y: content.y * dpr,
+        w: content.w * dpr,
+        h: content.h * dpr
+    };
 
     const currentNormId = getNormalizedId(elementId);
 
@@ -671,10 +797,10 @@ function redrawCanvas(canvas) {
     filtered.forEach(s => {
         if (s.points.length < 1) return;
         ctx.beginPath();
-        applyStrokeStyle(ctx, s.mode, s.color, s.size, s.opacity);
-        ctx.moveTo(content.x + s.points[0].x * content.w, content.y + s.points[0].y * content.h);
+        applyStrokeStyle(ctx, s.mode, s.color, s.size * dpr, s.opacity);
+        ctx.moveTo(dc.x + s.points[0].x * dc.w, dc.y + s.points[0].y * dc.h);
         for(let i = 1; i < s.points.length; i++) {
-            ctx.lineTo(content.x + s.points[i].x * content.w, content.y + s.points[i].y * content.h);
+            ctx.lineTo(dc.x + s.points[i].x * dc.w, dc.y + s.points[i].y * dc.h);
         }
         ctx.stroke();
     });
@@ -682,14 +808,16 @@ function redrawCanvas(canvas) {
     if (isDrawing && activeCanvas === canvas && currentPath.length > 0 && currentMode !== 'eraser') {
         ctx.beginPath();
         const s = toolSettings[currentMode];
-        applyStrokeStyle(ctx, currentMode, activeColor, s.size, s.opacity);
-        ctx.moveTo(content.x + currentPath[0].x * content.w, content.y + currentPath[0].y * content.h);
+        applyStrokeStyle(ctx, currentMode, activeColor, s.size * dpr, s.opacity);
+        ctx.moveTo(dc.x + currentPath[0].x * dc.w, dc.y + currentPath[0].y * dc.h);
         for(let i = 1; i < currentPath.length; i++) {
-            ctx.lineTo(content.x + currentPath[i].x * content.w, content.y + currentPath[i].y * content.h);
+            ctx.lineTo(dc.x + currentPath[i].x * dc.w, dc.y + currentPath[i].y * dc.h);
         }
         ctx.stroke();
     }
+
     ctx.globalAlpha = 1.0;
+    ctx.restore();
 }
 
 function redrawAllCanvasesOnScreen() {
@@ -707,29 +835,18 @@ function clearAllCanvases() {
 
 function syncAllCanvasesById(elementId, sourceCanvas) {
     const normId = getNormalizedId(elementId);
-    const dpr = window.devicePixelRatio || 1;
     document.querySelectorAll(`canvas[data-element-id]`).forEach(cvs => {
         if (cvs === sourceCanvas) return;
         const cId = cvs.getAttribute('data-element-id');
         if (cId === elementId || getNormalizedId(cId) === normId) {
-            // Sync ขนาดที่รวม dpr
-            cvs.width  = sourceCanvas.width;
-            cvs.height = sourceCanvas.height;
-            // Sync CSS size
-            cvs.style.width = sourceCanvas.style.width;
-            cvs.style.height = sourceCanvas.style.height;
-            // Sync transform
-            const ctx = cvs.getContext('2d');
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             redrawCanvas(cvs);
         }
     });
 }
 
 function handleVectorEraser(canvas, elementId, ex, ey) {
-    const dpr = window.devicePixelRatio || 1;
-    const displayWidth = canvas.width / dpr;
-    const displayHeight = canvas.height / dpr;
+    const displayWidth = canvas.clientWidth;
+    const displayHeight = canvas.clientHeight;
     const radius = toolSettings.eraser.size;
     let isMutated = false;
 
@@ -910,37 +1027,48 @@ function openZoom(imgUrl, elementId) {
     zoomedImg.src = imgUrl;
 
     const setupZoomCanvas = () => {
+        // Guard: ป้องกันการเรียกซ้ำ
+        if (zoomCanvas.dataset.zoomSetup === '1') return;
+        zoomCanvas.dataset.zoomSetup = '1';
+
         // 1. ใช้ขนาดดั้งเดิมของภาพเสมอ เพื่อป้องกันความเพี้ยนจากการที่ภาพกำลังถูกซูมอยู่
         const w = zoomedImg.naturalWidth;
         const h = zoomedImg.naturalHeight;
 
         // หากรูปยังโหลดขนาดดั้งเดิมไม่เสร็จ ให้รอแล้วเรียกใหม่
         if (!w || !h) {
+            delete zoomCanvas.dataset.zoomSetup;
             setTimeout(setupZoomCanvas, 30);
             return;
         }
 
-        // 2. ตั้งค่า Resolution เชิงพิกัดของ Canvas ให้คมชัดตามหน้าจอ
-        const dpr = window.devicePixelRatio || 1;
-        zoomCanvas.width = Math.round(w * dpr);
-        zoomCanvas.height = Math.round(h * dpr);
-        
-        // 3. (สำคัญมาก) ปล่อยให้ CSS เป็นตัวคุมขนาดการแสดงผลให้ครอบทับรูปภาพเป๊ะๆ 
-        // โดยไม่ต้องฟิกซ์ขนาดเป็น px อีกต่อไป
+        // 2. ตั้งค่า CSS size ให้ canvas ครอบทับรูปภาพเป๊ะๆ
         zoomCanvas.style.width = '100%';
         zoomCanvas.style.height = '100%';
 
+        // 3. เปิด overlay ก่อน เพื่อให้ browser คำนวณ layout แล้วค่อยอ่าน clientWidth
+        document.body.classList.add('zoom-open');
+        zoomOverlay.classList.remove('hidden');
+
+        // force layout recalculation — offsetWidth บังคับให้ browser layout ทันที
+        void zoomCanvas.offsetWidth;
+
+        // 4. ตั้งค่า buffer = CSS display size × dpr (ไม่ใช่ naturalWidth × dpr)
+        //    เพราะ redrawCanvas() ใช้ clientWidth/clientHeight ในการวาด
+        //    ถ้า buffer ใหญ่กว่า CSS display → browser scale ลง → เส้นผิดตำแหน่ง!
+        const dpr = window.devicePixelRatio || 1;
+        zoomCanvas.width = Math.round(zoomCanvas.clientWidth * dpr);
+        zoomCanvas.height = Math.round(zoomCanvas.clientHeight * dpr);
+
         const ctx = zoomCanvas.getContext('2d');
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        
-        // 4. วาดเส้นเก่าลงไป "เพียงครั้งเดียว"
+
+        // 5. วาดเส้นเก่าลงไป
         redrawCanvas(zoomCanvas);
         
         updateCanvasesPointerEvents();
-        document.body.classList.add('zoom-open');
-        zoomOverlay.classList.remove('hidden');
     };
-    
+
     zoomedImg.onload = () => {
         setTimeout(setupZoomCanvas, 60);
     };
@@ -963,6 +1091,7 @@ function closeZoom() {
     zoomOverlay.classList.add('hidden');
     document.body.classList.remove('zoom-open');
     currentZoomElementId = null;
+    delete zoomCanvas.dataset.zoomSetup;
     redrawAllCanvasesOnScreen();
     updateCanvasesPointerEvents();
 
@@ -984,6 +1113,12 @@ function handleZoomSlider(val) {
 }
 function updateZoomTransform() {
     document.getElementById('zoom-transform-container').style.transform = `translate(${panX}px,${panY}px) scale(${zoomScale})`;
+    if (zoomCanvas) {
+        requestAnimationFrame(() => {
+            syncGalleryCanvasToImage(zoomCanvas);
+            redrawCanvas(zoomCanvas);
+        });
+    }
     updateMinimapViewer();
 }
 function updateMinimapViewer() {
@@ -1036,7 +1171,7 @@ function renderQuestion() {
                 return `
                     <div class="relative rounded-xl bg-white border border-slate-200 shadow-sm ${isHorizontal ? 'flex-shrink-0 flex items-center justify-center' : 'w-full mb-4'}">
                         <img src="${url}" class="${isHorizontal ? 'h-[400px] w-auto' : 'w-full max-h-[65vh]'} object-contain block select-none pointer-events-none">
-                        <canvas data-element-id="${elementId}" class="gallery-canvas absolute top-0 left-0 w-full h-full z-10"></canvas>
+                        <canvas data-element-id="${elementId}" class="gallery-canvas absolute inset-0 w-full h-full z-10"></canvas>
                         <div class="absolute top-2 right-2 z-[99999]">
                             <button onclick="openZoom('${url}', '${elementId}')" class="zoom-btn bg-slate-900/90 text-white p-2 rounded-lg hover:bg-slate-800" style="position:relative;z-index:150">
                                 <i data-lucide="zoom-in" class="w-4 h-4"></i>
@@ -1102,19 +1237,13 @@ function renderQuestion() {
         document.querySelectorAll(`canvas[data-element-id="${elementId}"]`).forEach(cvs => {
             const img = cvs.parentElement.querySelector('img');
             const setup = () => {
-                const rect = img.getBoundingClientRect();
-                const dpr = window.devicePixelRatio || 1;
-                cvs.width = Math.round(rect.width * dpr);
-                cvs.height = Math.round(rect.height * dpr);
-                cvs.style.width = rect.width + 'px';
-                cvs.style.height = rect.height + 'px';
-                const ctx = cvs.getContext('2d');
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                syncGalleryCanvasToImage(cvs);
+                observeGalleryCanvasResize(cvs);
                 setupCanvasDrawing(cvs);
                 redrawCanvas(cvs);
             };
             if (img.complete) setup();
-            else img.onload = setup;
+            else img.addEventListener('load', setup, { once: true });
         });
     });
 
@@ -1202,7 +1331,7 @@ function setupAnswerCanvas(qId) {
 
     // ใช้ requestAnimationFrame เพื่อให้ DOM render เสร็จก่อน
     requestAnimationFrame(() => {
-        const rect = box.getBoundingClientRect();
+        const rect = getCssLayoutRect(box);
         const dpr = window.devicePixelRatio || 1;
         // ขนาด canvas = ขนาดจริงที่แสดงผล x devicePixelRatio
         canvas.width = Math.round(rect.width * dpr);
@@ -1228,7 +1357,7 @@ function setupOptionsCanvas(qId) {
     if (!canvas || !container) return;
 
     requestAnimationFrame(() => {
-        const rect = container.getBoundingClientRect();
+        const rect = getCssLayoutRect(container);
         const dpr = window.devicePixelRatio || 1;
         canvas.width = Math.round(rect.width * dpr);
         canvas.height = Math.round(rect.height * dpr);
@@ -1251,7 +1380,7 @@ function setupTranscriptCanvas(qId) {
     if (!canvas || !box) return;
 
     requestAnimationFrame(() => {
-        const rect = box.getBoundingClientRect();
+        const rect = getCssLayoutRect(box);
         const dpr = window.devicePixelRatio || 1;
         canvas.width = Math.round(rect.width * dpr);
         canvas.height = Math.round(rect.height * dpr);
@@ -1274,8 +1403,13 @@ function setupGlobalTranscriptCanvas(qId) {
     const box = document.getElementById('global-transcript-box');
     if (!canvas || !box) return;
 
+    // The canvas uses absolute inset-0 w-full h-full — its display size
+    // must match the parent (.relative.mt-3), not the box inside it.
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
     requestAnimationFrame(() => {
-        const rect = box.getBoundingClientRect();
+        const rect = getCssLayoutRect(parent);
         const dpr = window.devicePixelRatio || 1;
         canvas.width = Math.round(rect.width * dpr);
         canvas.height = Math.round(rect.height * dpr);
@@ -1699,42 +1833,19 @@ let wheelResizeTimeout = null;
 
 function viewportApplyTransform() {
     zoomableContent.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
-
-    const contentArea = document.getElementById('content-area');
-    if (contentArea) {
-        const wsRect = viewportWorkspace.getBoundingClientRect();
-        if (zoomScale > 1) {
-            contentArea.style.minWidth = Math.round(wsRect.width * zoomScale) + 'px';
-            contentArea.style.minHeight = Math.round(wsRect.height * zoomScale) + 'px';
-        } else {
-            contentArea.style.minWidth = wsRect.width + 'px';
-            contentArea.style.minHeight = wsRect.height + 'px';
-        }
-    }
 }
 
-function viewportSetScale(newScale, centerX, centerY) {
-    const oldScale = zoomScale;
+function viewportSetScale(newScale) {
     zoomScale = Math.min(Math.max(newScale, 0.5), 4);
-
-    if (centerX !== undefined && centerY !== undefined && oldScale > 0) {
-        const contentPointX = (centerX - panX) / oldScale;
-        const contentPointY = (centerY - panY) / oldScale;
-        panX = centerX - contentPointX * zoomScale;
-        panY = centerY - contentPointY * zoomScale;
-    }
-
     viewportApplyTransform();
 }
 
 function viewportZoomIn() {
-    const rect = viewportWorkspace.getBoundingClientRect();
-    viewportSetScale(zoomScale + 0.2, rect.width / 2, rect.height / 2);
+    viewportSetScale(zoomScale + 0.2);
 }
 
 function viewportZoomOut() {
-    const rect = viewportWorkspace.getBoundingClientRect();
-    viewportSetScale(zoomScale - 0.2, rect.width / 2, rect.height / 2);
+    viewportSetScale(zoomScale - 0.2);
 }
 
 function viewportReset() {
@@ -1760,53 +1871,6 @@ function initViewportControls() {
         if (e.code === 'Space') {
             spaceHeld = false;
         }
-    });
-
-    // Ctrl+wheel = viewport zoom
-    viewportWorkspace.addEventListener('wheel', e => {
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            const wsRect = viewportWorkspace.getBoundingClientRect();
-            const localX = e.clientX - wsRect.left;
-            const localY = e.clientY - wsRect.top;
-            viewportSetScale(zoomScale + delta, localX, localY);
-            clearTimeout(wheelResizeTimeout);
-            wheelResizeTimeout = setTimeout(resizeAllActiveCanvases, 120);
-        }
-    }, { passive: false });
-
-    // Pinch-to-zoom (2 fingers)
-    viewportWorkspace.addEventListener('touchstart', e => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            pinchStartDistance = Math.hypot(dx, dy);
-            pinchStartScale = zoomScale;
-        }
-    }, { passive: false });
-
-    viewportWorkspace.addEventListener('touchmove', e => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            const currentDistance = Math.hypot(dx, dy);
-            if (pinchStartDistance > 0) {
-                const wsRect = viewportWorkspace.getBoundingClientRect();
-                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - wsRect.left;
-                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - wsRect.top;
-                const newScale = pinchStartScale * (currentDistance / pinchStartDistance);
-                viewportSetScale(newScale, midX, midY);
-                clearTimeout(wheelResizeTimeout);
-                wheelResizeTimeout = setTimeout(resizeAllActiveCanvases, 120);
-            }
-        }
-    }, { passive: false });
-
-    viewportWorkspace.addEventListener('touchend', () => {
-        pinchStartDistance = 0;
     });
 
     viewportWorkspace.addEventListener('contextmenu', e => {
