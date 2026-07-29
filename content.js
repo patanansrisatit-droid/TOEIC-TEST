@@ -924,7 +924,7 @@ const examPackages = [
                 "id": 164,
                 "groupId": "",
                 "questionText": "164: Why was the letter written?",
-                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-66.png"],
+                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-67.png"],
                 "options": [
                 "To ask for research proposals",
                 "To announce that funds have been awarded",
@@ -938,7 +938,7 @@ const examPackages = [
                 "id": 165,
                 "groupId": "",
                 "questionText": "165: When is a copy of the bank agreement due to MGSC?",
-                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-66.png"],
+                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-67.png"],
                 "options": [
                 "On April 15",
                 "On May 5",
@@ -952,7 +952,7 @@ const examPackages = [
                 "id": 166,
                 "groupId": "",
                 "questionText": "166: What is indicated about the MGSC contract?",
-                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-66.png"],
+                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-67.png"],
                 "options": [
                 "It includes an itemized list of costs.",
                 "It will be reviewed once a year.",
@@ -966,7 +966,7 @@ const examPackages = [
                 "id": 167,
                 "groupId": "",
                 "questionText": "167: What is suggested about Ms. Kulp?",
-                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-66.png"],
+                "images": ["./assets/images/ฟ้าแดงเหลือง RC2/BRY 64-67.png"],
                 "options": [
                 "She is in charge of approving grant applications.",
                 "She has conducted research similar to that of Ms. Ortiz.",
